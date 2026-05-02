@@ -1,42 +1,60 @@
 const express = require("express");
 const paydunya = require("paydunya");
-const app = express();
 
+const app = express();
 app.use(express.json());
 
-// Configuration de ton compte Mohamed Guebre
+// CONFIG PAYDUNYA
 paydunya.setup({
-  master_key: "**************************", // Ta Clé Principale
-  public_key: "**************************", // Ta Clé Publique
-  private_key: "**************************", // Ta Clé Privée
-  token: "**************************",      // Ton Token
-  mode: "test" 
+  master_key: "**************************",
+  public_key: "**************************",
+  private_key: "**************************",
+  token: "**************************",
+  mode: "test"
 });
 
-// Route pour générer une facture spécifique
+// PAGE TEST
+app.get("/", (req, res) => {
+  res.send("🚀 BizGo API running");
+});
+
+// ROUTE FACTURE
 app.get("/generer-facture", async (req, res) => {
+  try {
     let invoice = new paydunya.CheckoutInvoice();
-    
-    // On peut imaginer que ces infos viendront de ton interface plus tard
-    const montantFacture = 10000; // Exemple : 10 000 FCFA
+
+    const montantFacture = 10000;
     const clientNom = "Client Demo";
 
-    // Configuration de la facture PayDunya
-    invoice.addItem("Facture BizGo", 1, montantFacture, montantFacture, "Prestation de service via BizGo");
+    invoice.addItem(
+      "Facture BizGo",
+      1,
+      montantFacture,
+      montantFacture,
+      "Prestation BizGo"
+    );
+
     invoice.total_amount = montantFacture;
-    invoice.description = `Facture générée par l'application BizGo pour ${clientNom}`;
+    invoice.description = `Facture pour ${clientNom}`;
 
-    // Création et redirection
-    invoice.create().then(() => {
-        res.redirect(invoice.getInvoiceUrl());
-    }).catch((e) => {
-        res.status(500).send("Erreur lors de la génération : " + e.message);
-    });
+    await invoice.create();
+
+    res.redirect(invoice.getInvoiceUrl());
+  } catch (e) {
+    console.error(e);
+    res.status(500).send("Erreur : " + e.message);
+  }
 });
 
-app.get("/", (req, res) => {
-    res.send("🚀 BizGo : Système de Génération de Factures prêt.");
+// IPN (IMPORTANT 🔥)
+app.post("/ipn", (req, res) => {
+  console.log("Paiement reçu :", req.body);
+  res.status(200).send("OK");
 });
 
+// PORT RENDER
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Serveur de facturation lancé sur port " + PORT));
+
+app.listen(PORT, () => {
+  console.log("Serveur lancé sur port " + PORT);
+});

@@ -9,6 +9,7 @@
   "author": "Mohamed54-l",
   "license": "ISC",
   "dependencies": {
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "paydunya": "^1.0.12"
   }
 }
