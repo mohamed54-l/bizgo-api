@@ -1,0 +1,14 @@
+{
+  "name": "bizgo-api",
+  "version": "1.0.0",
+  "description": "Bizgo backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "Mohamed54-l",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
