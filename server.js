@@ -10,12 +10,7 @@ paydunya.setup({
   public_key: "**************************",
   private_key: "**************************",
   token: "**************************",
-  mode: "test" // change en "live" plus tard
-});
-
-// 🏪 STORE
-const store = new paydunya.Store({
-  name: "BizGo Invoice App"
+  mode: "test"
 });
 
 // 🟢 ROUTE TEST
@@ -23,50 +18,42 @@ app.get("/", (req, res) => {
   res.send("🚀 BizGo API running");
 });
 
-// 💳 ROUTE FACTURE
+// 💳 ROUTE FACTURE (VERSION STABLE)
 app.get("/generer-facture", async (req, res) => {
   try {
-    const invoice = new paydunya.CheckoutInvoice(store);
+    const invoice = new paydunya.CheckoutInvoice();
 
-    const montantFacture = 1000; // ⚠️ commence petit pour test
-    const clientNom = "Client Demo";
-
-    // 🔁 URLs obligatoires
+    // 🔁 URLs OBLIGATOIRES
     invoice.return_url = "https://bizgo-api.onrender.com/";
     invoice.cancel_url = "https://bizgo-api.onrender.com/";
+    invoice.callback_url = "https://bizgo-api.onrender.com/ipn";
 
-    // 📦 PRODUIT
-    invoice.addItem(
-      "Service BizGo",
-      1,
-      montantFacture,
-      montantFacture,
-      "Paiement test BizGo"
-    );
+    // 📦 PRODUIT (FORMAT SIMPLE ET VALIDE)
+    invoice.addItem("Test Bizgo", 1, 1000, 1000, "Paiement test");
 
-    invoice.total_amount = montantFacture;
-    invoice.description = `Facture BizGo pour ${clientNom}`;
+    invoice.total_amount = 1000;
+    invoice.description = "Paiement test Bizgo";
 
-    // 🚀 CRÉATION FACTURE
+    // 🚀 CRÉATION
     await invoice.create();
 
-    const paymentUrl = invoice.getInvoiceUrl();
+    const url = invoice.getInvoiceUrl();
 
-    console.log("🔗 URL Paiement :", paymentUrl);
+    console.log("🔗 URL paiement :", url);
 
-    if (paymentUrl) {
-      return res.redirect(paymentUrl);
+    if (url) {
+      return res.redirect(url);
     } else {
-      return res.status(500).send("Erreur: URL de paiement non générée");
+      return res.status(500).send("Erreur création facture");
     }
 
   } catch (error) {
     console.error("❌ Erreur PayDunya:", error);
-    return res.status(500).send("Erreur serveur: " + error.message);
+    return res.status(500).send("Erreur: " + error.message);
   }
 });
 
-// 🔔 IPN (confirmation paiement)
+// 🔔 IPN
 app.post("/ipn", (req, res) => {
   console.log("💰 Paiement reçu :", req.body);
   res.status(200).send("OK");
