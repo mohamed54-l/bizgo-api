@@ -18,6 +18,8 @@ app.get("/", (req, res) => {
   res.send("🚀 BizGo API running");
 });
 
+paydunya.config.set_app_name("BizGo Invoice App");
+
 // ROUTE FACTURE
 app.get("/generer-facture", async (req, res) => {
   try {
