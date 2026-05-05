@@ -4,61 +4,63 @@ const paydunya = require("paydunya");
 const app = express();
 app.use(express.json());
 
-// 🔐 CONFIG PAYDUNYA
+// 🔐 CONFIG PAYDUNYA (MET TES VRAIES CLÉS)
 paydunya.setup({
-  master_key: "**************************",
-  public_key: "**************************",
-  private_key: "**************************",
-  token: "**************************",
-  mode: "test"
+  master_key: "TON_MASTER_KEY",
+  public_key: "TON_PUBLIC_KEY",
+  private_key: "TON_PRIVATE_KEY",
+  token: "TON_TOKEN",
+  mode: "test" // passe à "live" plus tard
 });
 
 // 🟢 ROUTE TEST
+app.get("/", (req, res) => {
+  res.send("🚀 BizGo API fonctionne");
+});
+
+// 💳 ROUTE FACTURE (VERSION STABLE)
 app.get("/generer-facture", async (req, res) => {
   try {
     const invoice = new paydunya.CheckoutInvoice();
 
     const montant = 1000;
 
-    // ✅ CONFIGURATION OBLIGATOIRE DU STORE ICI
+    // ✅ STORE (FORMAT CORRECT)
     invoice.store = {
       name: "BizGo",
       tagline: "Paiement sécurisé",
       postal_address: "Dakar",
-      phone: "770000000"
+      phone_number: "770000000"
     };
 
-    // ✅ INFOS CLIENT (TRÈS IMPORTANT)
+    // ✅ CLIENT (FORMAT CORRECT)
     invoice.customer = {
       name: "Client Test",
-      email: "client@test.com",
-      phone: "770000000"
+      email: "test@gmail.com",
+      phone_number: "770000000"
     };
 
     // ✅ PRODUIT
-    invoice.addItem(
-      "Service BizGo",
-      1,
-      montant,
-      montant,
-      "Paiement test"
-    );
+    invoice.addItem("Service BizGo", 1, montant, montant);
 
+    // ✅ TOTAL
     invoice.total_amount = montant;
 
-    // ✅ URLs (OBLIGATOIRE)
+    // ✅ URLS OBLIGATOIRES
     invoice.return_url = "https://bizgo-api.onrender.com/";
     invoice.cancel_url = "https://bizgo-api.onrender.com/";
 
-    // 🚀 CREATE
-    await invoice.create();
+    // 🚀 CRÉATION FACTURE
+    const response = await invoice.create();
 
-    const url = invoice.getInvoiceUrl();
+    console.log("📦 Réponse PayDunya:", response);
 
-    if (url) {
-      return res.redirect(url);
+    // ✅ VÉRIFICATION
+    if (response && response.response_code === "00") {
+      const paymentUrl = invoice.response_text;
+      return res.redirect(paymentUrl);
     } else {
-      return res.status(500).send("Erreur génération URL");
+      return res.status(500).json(response);
     }
 
   } catch (error) {
@@ -67,10 +69,10 @@ app.get("/generer-facture", async (req, res) => {
   }
 });
 
-// 🔔 IPN
+// 🔔 IPN (confirmation paiement)
 app.post("/ipn", (req, res) => {
   console.log("💰 Paiement reçu :", req.body);
-  res.status(200).send("OK");
+  res.sendStatus(200);
 });
 
 // 🌍 PORT RENDER
