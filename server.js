@@ -14,42 +14,56 @@ paydunya.setup({
 });
 
 // 🟢 ROUTE TEST
-app.get("/", (req, res) => {
-  res.send("🚀 BizGo API running");
-});
-
-// 💳 ROUTE FACTURE (VERSION STABLE)
 app.get("/generer-facture", async (req, res) => {
   try {
     const invoice = new paydunya.CheckoutInvoice();
 
-    // 🔁 URLs OBLIGATOIRES
+    const montant = 1000;
+
+    // ✅ CONFIGURATION OBLIGATOIRE DU STORE ICI
+    invoice.store = {
+      name: "BizGo",
+      tagline: "Paiement sécurisé",
+      postal_address: "Dakar",
+      phone: "770000000"
+    };
+
+    // ✅ INFOS CLIENT (TRÈS IMPORTANT)
+    invoice.customer = {
+      name: "Client Test",
+      email: "client@test.com",
+      phone: "770000000"
+    };
+
+    // ✅ PRODUIT
+    invoice.addItem(
+      "Service BizGo",
+      1,
+      montant,
+      montant,
+      "Paiement test"
+    );
+
+    invoice.total_amount = montant;
+
+    // ✅ URLs (OBLIGATOIRE)
     invoice.return_url = "https://bizgo-api.onrender.com/";
     invoice.cancel_url = "https://bizgo-api.onrender.com/";
-    invoice.callback_url = "https://bizgo-api.onrender.com/ipn";
 
-    // 📦 PRODUIT (FORMAT SIMPLE ET VALIDE)
-    invoice.addItem("Test Bizgo", 1, 1000, 1000, "Paiement test");
-
-    invoice.total_amount = 1000;
-    invoice.description = "Paiement test Bizgo";
-
-    // 🚀 CRÉATION
+    // 🚀 CREATE
     await invoice.create();
 
     const url = invoice.getInvoiceUrl();
 
-    console.log("🔗 URL paiement :", url);
-
     if (url) {
       return res.redirect(url);
     } else {
-      return res.status(500).send("Erreur création facture");
+      return res.status(500).send("Erreur génération URL");
     }
 
   } catch (error) {
     console.error("❌ Erreur PayDunya:", error);
-    return res.status(500).send("Erreur: " + error.message);
+    return res.status(500).send(error.message);
   }
 });
 
