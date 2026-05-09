@@ -7,7 +7,7 @@ app.use(express.json());
 
 // 🔐 CINETPAY CONFIG (Depuis les variables d'environnement Render)
 const API_KEY = process.env.CINETPAY_KEY; // sk_live_...
-const SITE_ID = "bizgo"; // Ton slug
+const SITE_ID = "714851"; // Ton slug
 
 app.get("/", (req, res) => {
   res.send("✅ BizGo API fonctionne");
