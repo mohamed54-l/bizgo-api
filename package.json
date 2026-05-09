@@ -9,6 +9,8 @@
   "author": "Mohamed54-l",
   "license": "ISC",
   "dependencies": {
+    "axios": "^1.16.0",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "paydunya": "^1.0.12"
   }

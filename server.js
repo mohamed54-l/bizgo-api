@@ -1,83 +1,78 @@
 const express = require("express");
-const paydunya = require("paydunya");
+const axios = require("axios");
+require('dotenv').config(); // Pour lire ton .env en local
 
 const app = express();
 app.use(express.json());
 
-// 🔐 CONFIG PAYDUNYA (MET TES VRAIES CLÉS)
-paydunya.setup({
-  master_key: "TON_MASTER_KEY",
-  public_key: "TON_PUBLIC_KEY",
-  private_key: "TON_PRIVATE_KEY",
-  token: "TON_TOKEN",
-  mode: "test" // passe à "live" plus tard
-});
+// 🔐 CINETPAY CONFIG (Depuis les variables d'environnement Render)
+const API_KEY = process.env.CINETPAY_KEY; // sk_live_...
+const SITE_ID = "bizgo"; // Ton slug
 
-// 🟢 ROUTE TEST
 app.get("/", (req, res) => {
-  res.send("🚀 BizGo API fonctionne");
+  res.send("✅ BizGo API fonctionne");
 });
 
-// 💳 ROUTE FACTURE (VERSION STABLE)
-app.get("/generer-facture", async (req, res) => {
+app.get("/payer", async (req, res) => {
   try {
-    const invoice = new paydunya.CheckoutInvoice();
+    const merchant_transaction_id = "TX" + Date.now();
 
-    const montant = 1000;
+    // 🚀 REQUÊTE CINETPAY (Format V2 plus stable avec les slugs)
+    const response = await axios.post(
+      "https://api-checkout.cinetpay.com/v2/payment",
+      {
+        apikey: API_KEY,
+        site_id: SITE_ID,
+        transaction_id: merchant_transaction_id,
+        amount: 2000,
+        currency: "XOF",
+        description: "Abonnement BizGo",
+        notify_url: "https://bizgo-api-1.onrender.com/ipn",
+        return_url: "https://bizgo-api-1.onrender.com/success",
+        channels: "ALL",
+        customer_name: "Client",
+        customer_surname: "BizGo",
+        customer_email: "client@test.com",
+        customer_phone_number: "+22670000000",
+        customer_address: "Ouagadougou",
+        customer_city: "Ouagadougou",
+        customer_country: "BF",
+        customer_state: "BF",
+        customer_zip_code: "226",
+        lang: "fr"
+      }
+    );
 
-    // ✅ STORE (FORMAT CORRECT)
-    invoice.store = {
-      name: "BizGo",
-      tagline: "Paiement sécurisé",
-      postal_address: "Dakar",
-      phone_number: "770000000"
-    };
+    console.log("✅ REPONSE CINETPAY :", response.data);
 
-    // ✅ CLIENT (FORMAT CORRECT)
-    invoice.customer = {
-      name: "Client Test",
-      email: "test@gmail.com",
-      phone_number: "770000000"
-    };
+    // En V2, l'URL est dans data.payment_url
+    const payment_url = response.data.data ? response.data.data.payment_url : null;
 
-    // ✅ PRODUIT
-    invoice.addItem("Service BizGo", 1, montant, montant);
-
-    // ✅ TOTAL
-    invoice.total_amount = montant;
-
-    // ✅ URLS OBLIGATOIRES
-    invoice.return_url = "https://bizgo-api.onrender.com/";
-    invoice.cancel_url = "https://bizgo-api.onrender.com/";
-
-    // 🚀 CRÉATION FACTURE
-    const response = await invoice.create();
-
-    console.log("📦 Réponse PayDunya:", response);
-
-    // ✅ VÉRIFICATION
-    if (response && response.response_code === "00") {
-      const paymentUrl = invoice.response_text;
-      return res.redirect(paymentUrl);
-    } else {
-      return res.status(500).json(response);
+    if (!payment_url) {
+      return res.status(500).send({
+        msg: "CinetPay n'a pas renvoyé d'URL",
+        debug: response.data
+      });
     }
 
+    return res.redirect(payment_url);
+
   } catch (error) {
-    console.error("❌ Erreur PayDunya:", error);
-    return res.status(500).send(error.message);
+    console.error("❌ ERREUR CINETPAY :", error.response?.data || error.message);
+    return res.status(500).send(error.response?.data || error.message);
   }
 });
 
-// 🔔 IPN (confirmation paiement)
+// --- Reste du code (IPN, Success, Failed) identique ---
 app.post("/ipn", (req, res) => {
-  console.log("💰 Paiement reçu :", req.body);
-  res.sendStatus(200);
+  console.log("💰 Notification paiement :", req.body);
+  res.send("OK");
 });
 
-// 🌍 PORT RENDER
-const PORT = process.env.PORT || 10000;
+app.get("/success", (req, res) => res.send("🎉 Paiement réussi"));
+app.get("/failed", (req, res) => res.send("❌ Paiement échoué"));
 
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🚀 Serveur lancé sur port ${PORT}`);
 });
