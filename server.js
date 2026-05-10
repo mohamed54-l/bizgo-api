@@ -5,37 +5,37 @@ const app = express();
 
 app.use(express.json());
 
-// 🔐 CLÉS CINETPAY DEPUIS RENDER
+// 🔐 VARIABLES CINETPAY (Render Environment Variables)
 const ACCOUNT_KEY = process.env.CINETPAY_KEY;
 const ACCOUNT_PASSWORD = process.env.CINETPAY_PASSWORD;
 
-// 🟢 PAGE ACCUEIL
+// 🟢 PAGE PRINCIPALE
 app.get("/", (req, res) => {
-  res.send("✅ BizGo API fonctionne");
+  res.send("✅ BizGo API fonctionne correctement");
 });
 
-// 💳 ROUTE PAIEMENT
+// 💳 ROUTE DE PAIEMENT
 app.get("/payer", async (req, res) => {
 
   try {
 
     // 🔥 ID UNIQUE
-    const merchant_transaction_id =
+    const transaction_id =
       "TX-" + Date.now();
 
-    // 🚀 REQUÊTE API CINETPAY
+    // 🚀 APPEL API CINETPAY
     const response = await axios.post(
 
-      "https://api-checkout.cinetpay.com/v1/payment",
+      "https://api-checkout.cinetpay.com/v2/payment",
 
       {
 
-        currency: "XOF",
-
         amount: 2000,
 
+        currency: "XOF",
+
         merchant_transaction_id:
-          merchant_transaction_id,
+          transaction_id,
 
         success_url:
           "https://bizgo-api-1.onrender.com/success",
@@ -53,13 +53,13 @@ app.get("/payer", async (req, res) => {
           "Mohamed",
 
         client_last_name:
-          "BizGo",
-
-        client_phone_number:
-          "+22670000000",
+          "Guebre",
 
         client_email:
           "test@bizgo.com",
+
+        client_phone_number:
+          "+22670000000",
 
         lang: "fr",
 
@@ -75,6 +75,13 @@ app.get("/payer", async (req, res) => {
 
           password: ACCOUNT_PASSWORD
 
+        },
+
+        headers: {
+
+          "Content-Type":
+            "application/json"
+
         }
 
       }
@@ -87,11 +94,11 @@ app.get("/payer", async (req, res) => {
       response.data
     );
 
-    // 🔥 URL PAIEMENT
+    // 🔥 URL DE PAIEMENT
     const payment_url =
       response.data.payment_url;
 
-    // ❌ SI URL ABSENTE
+    // ❌ SI PAS D’URL
     if (!payment_url) {
 
       return res.status(500).json(
@@ -120,11 +127,11 @@ app.get("/payer", async (req, res) => {
 
 });
 
-// 🔔 NOTIFICATION IPN
+// 🔔 WEBHOOK
 app.post("/ipn", (req, res) => {
 
   console.log(
-    "💰 Paiement reçu :",
+    "💰 Notification paiement :",
     req.body
   );
 
@@ -135,14 +142,18 @@ app.post("/ipn", (req, res) => {
 // ✅ SUCCESS
 app.get("/success", (req, res) => {
 
-  res.send("🎉 Paiement réussi");
+  res.send(
+    "🎉 Paiement réussi"
+  );
 
 });
 
 // ❌ FAILED
 app.get("/failed", (req, res) => {
 
-  res.send("❌ Paiement échoué");
+  res.send(
+    "❌ Paiement échoué"
+  );
 
 });
 
