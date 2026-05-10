@@ -1,78 +1,159 @@
 const express = require("express");
 const axios = require("axios");
-require('dotenv').config(); // Pour lire ton .env en local
 
 const app = express();
+
 app.use(express.json());
 
-// 🔐 CINETPAY CONFIG (Depuis les variables d'environnement Render)
-const API_KEY = process.env.CINETPAY_KEY; // sk_live_...
-const SITE_ID = 714851; // Ton slug
+// 🔐 CLÉS CINETPAY DEPUIS RENDER
+const ACCOUNT_KEY = process.env.CINETPAY_KEY;
+const ACCOUNT_PASSWORD = process.env.CINETPAY_PASSWORD;
 
+// 🟢 PAGE ACCUEIL
 app.get("/", (req, res) => {
   res.send("✅ BizGo API fonctionne");
 });
 
+// 💳 ROUTE PAIEMENT
 app.get("/payer", async (req, res) => {
-  try {
-    const merchant_transaction_id = "TX" + Date.now();
 
-    // 🚀 REQUÊTE CINETPAY (Format V2 plus stable avec les slugs)
+  try {
+
+    // 🔥 ID UNIQUE
+    const merchant_transaction_id =
+      "TX-" + Date.now();
+
+    // 🚀 REQUÊTE API CINETPAY
     const response = await axios.post(
-      "https://api-checkout.cinetpay.com/v2/payment",
+
+      "https://api-checkout.cinetpay.com/v1/payment",
+
       {
-        apikey: API_KEY,
-        site_id: SITE_ID,
-        transaction_id: merchant_transaction_id,
-        amount: 2000,
+
         currency: "XOF",
-        description: "Abonnement BizGo",
-        notify_url: "https://bizgo-api-1.onrender.com/ipn",
-        return_url: "https://bizgo-api-1.onrender.com/success",
-        channels: "ALL",
-        customer_name: "Client",
-        customer_surname: "BizGo",
-        customer_email: "client@test.com",
-        customer_phone_number: "+22670000000",
-        customer_address: "Ouagadougou",
-        customer_city: "Ouagadougou",
-        customer_country: "BF",
-        customer_state: "BF",
-        customer_zip_code: "226",
-        lang: "fr"
+
+        amount: 2000,
+
+        merchant_transaction_id:
+          merchant_transaction_id,
+
+        success_url:
+          "https://bizgo-api-1.onrender.com/success",
+
+        failed_url:
+          "https://bizgo-api-1.onrender.com/failed",
+
+        notify_url:
+          "https://bizgo-api-1.onrender.com/ipn",
+
+        designation:
+          "Abonnement BizGo",
+
+        client_first_name:
+          "Mohamed",
+
+        client_last_name:
+          "BizGo",
+
+        client_phone_number:
+          "+22670000000",
+
+        client_email:
+          "test@bizgo.com",
+
+        lang: "fr",
+
+        direct_pay: false
+
+      },
+
+      {
+
+        auth: {
+
+          username: ACCOUNT_KEY,
+
+          password: ACCOUNT_PASSWORD
+
+        }
+
       }
+
     );
 
-    console.log("✅ REPONSE CINETPAY :", response.data);
+    // 📥 LOGS
+    console.log(
+      "✅ REPONSE CINETPAY :",
+      response.data
+    );
 
-    // En V2, l'URL est dans data.payment_url
-    const payment_url = response.data.data ? response.data.data.payment_url : null;
+    // 🔥 URL PAIEMENT
+    const payment_url =
+      response.data.payment_url;
 
+    // ❌ SI URL ABSENTE
     if (!payment_url) {
-      return res.status(500).send({
-        msg: "CinetPay n'a pas renvoyé d'URL",
-        debug: response.data
-      });
+
+      return res.status(500).json(
+        response.data
+      );
+
     }
 
+    // 🚀 REDIRECTION
     return res.redirect(payment_url);
 
-  } catch (error) {
-    console.error("❌ ERREUR CINETPAY :", error.response?.data || error.message);
-    return res.status(500).send(error.response?.data || error.message);
   }
+
+  catch (error) {
+
+    console.error(
+      "❌ ERREUR CINETPAY :",
+      error.response?.data || error.message
+    );
+
+    return res.status(500).json(
+      error.response?.data || error.message
+    );
+
+  }
+
 });
 
-// --- Reste du code (IPN, Success, Failed) identique ---
+// 🔔 NOTIFICATION IPN
 app.post("/ipn", (req, res) => {
-  console.log("💰 Notification paiement :", req.body);
+
+  console.log(
+    "💰 Paiement reçu :",
+    req.body
+  );
+
   res.send("OK");
+
 });
 
-app.get("/success", (req, res) => res.send("🎉 Paiement réussi"));
-app.get("/failed", (req, res) => res.send("❌ Paiement échoué"));
+// ✅ SUCCESS
+app.get("/success", (req, res) => {
 
-const PORT = process.env.PORT || 10000;
+  res.send("🎉 Paiement réussi");
+
+});
+
+// ❌ FAILED
+app.get("/failed", (req, res) => {
+
+  res.send("❌ Paiement échoué");
+
+});
+
+// 🚀 PORT
+const PORT =
+  process.env.PORT || 10000;
+
 app.listen(PORT, () => {
-  console.log(`🚀 Serveur lancé sur port ${PORT}`);
+
+  console.log(
+    `🚀 Serveur lancé sur le port ${PORT}`
+  );
+
 });
