@@ -1,170 +1,155 @@
-const express = require("express");
-const axios = require("axios");
+import express from 'express'
+import { CinetPayClient } from 'cinetpay-js'
 
-const app = express();
+const app = express()
 
-app.use(express.json());
+app.use(express.json())
 
-// 🔐 VARIABLES CINETPAY (Render Environment Variables)
-const ACCOUNT_KEY = process.env.CINETPAY_KEY;
-const ACCOUNT_PASSWORD = process.env.CINETPAY_PASSWORD;
+// 🔐 CLIENT CINETPAY
+const client = new CinetPayClient({
 
-// 🟢 PAGE PRINCIPALE
-app.get("/", (req, res) => {
-  res.send("✅ BizGo API fonctionne correctement");
-});
+  credentials: {
 
-// 💳 ROUTE DE PAIEMENT
-app.get("/payer", async (req, res) => {
+    CI: {
+
+      apiKey:
+        process.env.CINETPAY_API_KEY_CI,
+
+      apiPassword:
+        process.env.CINETPAY_API_PASSWORD_CI,
+
+    },
+
+  },
+
+})
+
+// 🟢 PAGE TEST
+app.get('/', (req, res) => {
+
+  res.send('✅ BizGo API fonctionne')
+
+})
+
+// 💳 ROUTE PAIEMENT
+app.get('/payer', async (req, res) => {
 
   try {
 
-    // 🔥 ID UNIQUE
-    const transaction_id =
-      "TX-" + Date.now();
+    const orderId =
+      'ORDER-' + Date.now()
 
-    // 🚀 APPEL API CINETPAY
-    const response = await axios.post(
+    const payment =
+      await client.payment.initialize(
 
-      "https://api-checkout.cinetpay.com/v2/payment",
+        {
 
-      {
+          currency: 'XOF',
 
-        amount: 2000,
+          merchantTransactionId:
+            orderId,
 
-        currency: "XOF",
+          amount: 2000,
 
-        merchant_transaction_id:
-          transaction_id,
+          lang: 'fr',
 
-        success_url:
-          "https://bizgo-api-1.onrender.com/success",
+          designation:
+            'Abonnement BizGo',
 
-        failed_url:
-          "https://bizgo-api-1.onrender.com/failed",
+          clientEmail:
+            'test@bizgo.com',
 
-        notify_url:
-          "https://bizgo-api-1.onrender.com/ipn",
+          clientFirstName:
+            'Mohamed',
 
-        designation:
-          "Abonnement BizGo",
+          clientLastName:
+            'Guebre',
 
-        client_first_name:
-          "Mohamed",
+          clientPhoneNumber:
+            '+22670000000',
 
-        client_last_name:
-          "Guebre",
+          successUrl:
+            'https://bizgo-api-1.onrender.com/success',
 
-        client_email:
-          "test@bizgo.com",
+          failedUrl:
+            'https://bizgo-api-1.onrender.com/failed',
 
-        client_phone_number:
-          "+22670000000",
+          notifyUrl:
+            'https://bizgo-api-1.onrender.com/ipn',
 
-        lang: "fr",
-
-        direct_pay: false
-
-      },
-
-      {
-
-        auth: {
-
-          username: ACCOUNT_KEY,
-
-          password: ACCOUNT_PASSWORD
+          channel: 'PUSH',
 
         },
 
-        headers: {
+        'CI'
 
-          "Content-Type":
-            "application/json"
+      )
 
-        }
-
-      }
-
-    );
-
-    // 📥 LOGS
     console.log(
-      "✅ REPONSE CINETPAY :",
-      response.data
-    );
-
-    // 🔥 URL DE PAIEMENT
-    const payment_url =
-      response.data.payment_url;
-
-    // ❌ SI PAS D’URL
-    if (!payment_url) {
-
-      return res.status(500).json(
-        response.data
-      );
-
-    }
+      '✅ PAIEMENT :',
+      payment
+    )
 
     // 🚀 REDIRECTION
-    return res.redirect(payment_url);
+    return res.redirect(
+      payment.paymentUrl
+    )
 
   }
 
   catch (error) {
 
     console.error(
-      "❌ ERREUR CINETPAY :",
-      error.response?.data || error.message
-    );
+      '❌ ERREUR CINETPAY :',
+      error
+    )
 
     return res.status(500).json(
-      error.response?.data || error.message
-    );
+      error
+    )
 
   }
 
-});
+})
 
 // 🔔 WEBHOOK
-app.post("/ipn", (req, res) => {
+app.post('/ipn', (req, res) => {
 
   console.log(
-    "💰 Notification paiement :",
+    '💰 Notification :',
     req.body
-  );
+  )
 
-  res.send("OK");
+  res.send('OK')
 
-});
+})
 
 // ✅ SUCCESS
-app.get("/success", (req, res) => {
+app.get('/success', (req, res) => {
 
   res.send(
-    "🎉 Paiement réussi"
-  );
+    '🎉 Paiement réussi'
+  )
 
-});
+})
 
 // ❌ FAILED
-app.get("/failed", (req, res) => {
+app.get('/failed', (req, res) => {
 
   res.send(
-    "❌ Paiement échoué"
-  );
+    '❌ Paiement échoué'
+  )
 
-});
+})
 
 // 🚀 PORT
 const PORT =
-  process.env.PORT || 10000;
+  process.env.PORT || 10000
 
 app.listen(PORT, () => {
 
   console.log(
-    `🚀 Serveur lancé sur le port ${PORT}`
-  );
+    `🚀 Serveur lancé sur port ${PORT}`
+  )
 
-});
+})
