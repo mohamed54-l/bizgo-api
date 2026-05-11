@@ -1,9 +1,9 @@
-import express from 'express'
-import { CinetPayClient } from 'cinetpay-js'
+const express = require("express");
+const { CinetPayClient } = require("cinetpay-js");
 
-const app = express()
+const app = express();
 
-app.use(express.json())
+app.use(express.json());
 
 // 🔐 CLIENT CINETPAY
 const client = new CinetPayClient({
@@ -22,134 +22,133 @@ const client = new CinetPayClient({
 
   },
 
-})
+});
 
 // 🟢 PAGE TEST
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
 
-  res.send('✅ BizGo API fonctionne')
+  res.send("✅ BizGo API fonctionne");
 
-})
+});
 
 // 💳 ROUTE PAIEMENT
-app.get('/payer', async (req, res) => {
+app.get("/payer", async (req, res) => {
 
   try {
 
     const orderId =
-      'ORDER-' + Date.now()
+      "ORDER-" + Date.now();
 
     const payment =
       await client.payment.initialize(
 
         {
 
-          currency: 'XOF',
+          currency: "XOF",
 
           merchantTransactionId:
             orderId,
 
           amount: 2000,
 
-          lang: 'fr',
+          lang: "fr",
 
           designation:
-            'Abonnement BizGo',
+            "Abonnement BizGo",
 
           clientEmail:
-            'test@bizgo.com',
+            "test@bizgo.com",
 
           clientFirstName:
-            'Mohamed',
+            "Mohamed",
 
           clientLastName:
-            'Guebre',
+            "Guebre",
 
           clientPhoneNumber:
-            '+22670000000',
+            "+22670000000",
 
           successUrl:
-            'https://bizgo-api-1.onrender.com/success',
+            "https://bizgo-api-1.onrender.com/success",
 
           failedUrl:
-            'https://bizgo-api-1.onrender.com/failed',
+            "https://bizgo-api-1.onrender.com/failed",
 
           notifyUrl:
-            'https://bizgo-api-1.onrender.com/ipn',
+            "https://bizgo-api-1.onrender.com/ipn",
 
-          channel: 'PUSH',
+          channel: "PUSH",
 
         },
 
-        'CI'
+        "CI"
 
-      )
+      );
 
     console.log(
-      '✅ PAIEMENT :',
+      "✅ Paiement :",
       payment
-    )
+    );
 
-    // 🚀 REDIRECTION
     return res.redirect(
       payment.paymentUrl
-    )
+    );
 
   }
 
   catch (error) {
 
     console.error(
-      '❌ ERREUR CINETPAY :',
+      "❌ Erreur CinetPay :",
       error
-    )
+    );
 
     return res.status(500).json(
-      error
-    )
+      error.message || error
+    );
 
   }
 
-})
+});
 
-// 🔔 WEBHOOK
-app.post('/ipn', (req, res) => {
+// 🔔 IPN
+app.post("/ipn", (req, res) => {
 
   console.log(
-    '💰 Notification :',
+    "💰 Notification :",
     req.body
-  )
+  );
 
-  res.send('OK')
+  res.send("OK");
 
-})
+});
 
 // ✅ SUCCESS
-app.get('/success', (req, res) => {
+app.get("/success", (req, res) => {
 
   res.send(
-    '🎉 Paiement réussi'
-  )
+    "🎉 Paiement réussi"
+  );
 
-})
+});
 
 // ❌ FAILED
-app.get('/failed', (req, res) => {
+app.get("/failed", (req, res) => {
 
   res.send(
-    '❌ Paiement échoué'
-  )
+    "❌ Paiement échoué"
+  );
 
-})
+});
 
 // 🚀 PORT
 const PORT =
-  process.env.PORT || 10000
+  process.env.PORT || 10000;
 
 app.listen(PORT, () => {
 
   console.log(
     `🚀 Serveur lancé sur port ${PORT}`
-  )
+  );
 
-})
+});
