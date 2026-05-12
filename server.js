@@ -13,10 +13,10 @@ const client = new CinetPayClient({
     BF: {
 
       apiKey:
-        process.env.CINETPAY_API_KEY_CI,
+        process.env.CINETPAY_API_KEY_BF,
 
       apiPassword:
-        process.env.CINETPAY_API_PASSWORD_CI,
+        process.env.CINETPAY_API_PASSWORD_BF,
 
     },
 
