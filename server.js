@@ -10,7 +10,7 @@ const client = new CinetPayClient({
 
   credentials: {
 
-    CI: {
+    BF: {
 
       apiKey:
         process.env.CINETPAY_API_KEY_CI,
@@ -81,7 +81,7 @@ app.get("/payer", async (req, res) => {
 
         },
 
-        "CI"
+        "BF"
 
       );
 
