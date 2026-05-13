@@ -5,7 +5,12 @@ const app = express();
 
 app.use(express.json());
 
-// 🔐 CLIENT CINETPAY
+/*
+==================================================
+🔐 CONFIGURATION CINETPAY
+==================================================
+*/
+
 const client = new CinetPayClient({
 
   credentials: {
@@ -24,20 +29,30 @@ const client = new CinetPayClient({
 
 });
 
-// 🟢 PAGE TEST
+/*
+==================================================
+🟢 ROUTE TEST
+==================================================
+*/
+
 app.get("/", (req, res) => {
 
   res.send("✅ BizGo API fonctionne");
 
 });
 
-// 💳 ROUTE PAIEMENT
+/*
+==================================================
+💳 ROUTE DE PAIEMENT
+==================================================
+*/
+
 app.get("/payer", async (req, res) => {
 
   try {
 
     const orderId =
-      "ORDER-" + Date.now();
+      "TX-" + Date.now();
 
     const payment =
       await client.payment.initialize(
@@ -77,7 +92,8 @@ app.get("/payer", async (req, res) => {
           notifyUrl:
             "https://bizgo-api-1.onrender.com/ipn",
 
-          channel: "PUSH",
+          channel:
+            "MOBILE_MONEY",
 
         },
 
@@ -85,14 +101,46 @@ app.get("/payer", async (req, res) => {
 
       );
 
+    /*
+    ==========================================
+    🔍 DEBUG
+    ==========================================
+    */
+
     console.log(
-      "✅ Paiement :",
+      "✅ Réponse paiement :",
       payment
     );
 
-    return res.redirect(
-      payment.paymentUrl
-    );
+    /*
+    ==========================================
+    🚀 REDIRECTION
+    ==========================================
+    */
+
+    const paymentUrl =
+
+      payment.paymentUrl ||
+
+      payment.payment_url ||
+
+      payment.data?.payment_url;
+
+    if (!paymentUrl) {
+
+      return res.status(500).json({
+
+        error:
+          "URL paiement introuvable",
+
+        response:
+          payment,
+
+      });
+
+    }
+
+    return res.redirect(paymentUrl);
 
   }
 
@@ -103,19 +151,32 @@ app.get("/payer", async (req, res) => {
       error
     );
 
-    return res.status(500).json(
-      error.message || error
-    );
+    return res.status(500).json({
+
+      message:
+        "Erreur paiement",
+
+      details:
+        error.message ||
+
+        error,
+
+    });
 
   }
 
 });
 
-// 🔔 IPN
+/*
+==================================================
+🔔 WEBHOOK / IPN
+==================================================
+*/
+
 app.post("/ipn", (req, res) => {
 
   console.log(
-    "💰 Notification :",
+    "🔔 Notification reçue :",
     req.body
   );
 
@@ -123,32 +184,49 @@ app.post("/ipn", (req, res) => {
 
 });
 
-// ✅ SUCCESS
+/*
+==================================================
+✅ SUCCESS
+==================================================
+*/
+
 app.get("/success", (req, res) => {
 
   res.send(
-    "🎉 Paiement réussi"
+    "🎉 Paiement réussi !"
   );
 
 });
 
-// ❌ FAILED
+/*
+==================================================
+❌ FAILED
+==================================================
+*/
+
 app.get("/failed", (req, res) => {
 
   res.send(
-    "❌ Paiement échoué"
+    "❌ Paiement échoué."
   );
 
 });
 
-// 🚀 PORT
+/*
+==================================================
+🚀 LANCEMENT SERVEUR
+==================================================
+*/
+
 const PORT =
-  process.env.PORT || 10000;
+  process.env.PORT ||
+
+  10000;
 
 app.listen(PORT, () => {
 
   console.log(
-    `🚀 Serveur lancé sur port ${PORT}`
+    `🚀 BizGo API prête sur port ${PORT}`
   );
 
 });
