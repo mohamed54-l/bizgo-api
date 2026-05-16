@@ -1,14 +1,8 @@
 const express = require("express");
-const { Moneroo } = require("moneroo"); // Importation du SDK officiel
+require('dotenv').config(); // Pour charger les variables si besoin
 
 const app = express();
 app.use(express.json());
-
-// 🔐 INITIALISATION DU SDK MONEROO
-// Le SDK gère lui-même l'application des headers et des bonnes routes.
-const moneroo = new Moneroo({
-  secretKey: process.env.MONEROO_API_KEY,
-});
 
 app.get("/", (req, res) => {
   res.send("✅ BizGo API Moneroo fonctionne avec le SDK");
@@ -16,12 +10,18 @@ app.get("/", (req, res) => {
 
 app.get("/payer", async (req, res) => {
   try {
-    // Appel de la méthode officielle du SDK pour initialiser le paiement
+    // Importation dynamique du SDK pour éviter le crash au démarrage
+    const { Moneroo } = await import("moneroo");
+    
+    const moneroo = new Moneroo({
+      secretKey: process.env.MONEROO_API_KEY,
+    });
+
     const response = await moneroo.payments.initialize({
-      amount: 2000, // Le montant en XOF
+      amount: 2000,
       currency: "XOF",
       description: "Abonnement BizGo",
-      return_url: "https://bizgo-api-1.onrender.com/success", // Moneroo utilise return_url
+      return_url: "https://bizgo-api-1.onrender.com/success",
       customer: {
         name: "Mohamed",
         email: "test@bizgo.com",
@@ -31,23 +31,23 @@ app.get("/payer", async (req, res) => {
 
     console.log("✅ Réponse Moneroo SDK :", response.data);
 
-    // Le SDK renvoie l'URL dans la propriété checkout_url
-    if (response.data && response.data.checkout_url) {
-      return res.redirect(response.data.checkout_url);
+    // Sécurité sur la récupération de l'URL selon la réponse du SDK
+    const checkoutUrl = response.data?.checkout_url || response.checkout_url;
+
+    if (checkoutUrl) {
+      return res.redirect(checkoutUrl);
     } else {
-      throw new Error("L'URL de paiement (checkout_url) est introuvable.");
+      throw new Error("L'URL de paiement est introuvable dans la réponse.");
     }
 
   } catch (error) {
     console.error("❌ Erreur Moneroo SDK :", error.message || error);
-
     return res.status(500).json({
       error: error.message || "Erreur lors de l'initialisation du paiement",
     });
   }
 });
 
-// Webhook pour intercepter les validations de paiement
 app.post("/ipn", (req, res) => {
   console.log("🔔 Notification Moneroo :", req.body);
   res.send("OK");
