@@ -1,182 +1,63 @@
 const express = require("express");
-const { CinetPayClient } = require("cinetpay-js");
+const axios = require("axios");
 
 const app = express();
 
 app.use(express.json());
 
-/*
-==================================================
-🔐 CONFIGURATION CINETPAY
-==================================================
-*/
-
-const client = new CinetPayClient({
-
-  credentials: {
-
-    BF: {
-
-      apiKey:
-        process.env.CINETPAY_API_KEY,
-
-      apiPassword:
-        process.env.CINETPAY_API_PASSWORD,
-
-    },
-
-  },
-
-});
-
-/*
-==================================================
-🟢 ROUTE TEST
-==================================================
-*/
-
 app.get("/", (req, res) => {
-
-  res.send("✅ BizGo API fonctionne");
-
+  res.send("✅ BizGo API Moneroo fonctionne");
 });
-
-/*
-==================================================
-💳 ROUTE DE PAIEMENT
-==================================================
-*/
 
 app.get("/payer", async (req, res) => {
-
   try {
 
-    const orderId =
-      "TX-" + Date.now();
-
-    const payment =
-      await client.payment.initialize(
-
-        {
-
-          currency: "XOF",
-
-          merchantTransactionId:
-            orderId,
-
-          amount: 2000,
-
-          lang: "fr",
-
-          designation:
-            "Abonnement BizGo",
-
-          clientEmail:
-            "test@bizgo.com",
-
-          clientFirstName:
-            "Mohamed",
-
-          clientLastName:
-            "Guebre",
-
-          clientPhoneNumber:
-            "+22670000000",
-
-          successUrl:
-            "https://bizgo-api-1.onrender.com/success",
-
-          failedUrl:
-            "https://bizgo-api-1.onrender.com/failed",
-
-          notifyUrl:
-            "https://bizgo-api-1.onrender.com/ipn",
-
-          channel:
-            "MOBILE_MONEY",
-
+    const response = await axios.post(
+      "https://api.moneroo.io/v1/payments/initiate",
+      {
+        amount: 2000,
+        currency: "XOF",
+        description: "Abonnement BizGo",
+        customer: {
+          name: "Mohamed",
+          email: "test@bizgo.com",
+          phone: "+22670000000",
         },
-
-        "BF"
-
-      );
-
-    /*
-    ==========================================
-    🔍 DEBUG
-    ==========================================
-    */
-
-    console.log(
-      "✅ Réponse paiement :",
-      payment
+        redirect_url: "https://bizgo-api-1.onrender.com/success",
+        callback_url: "https://bizgo-api-1.onrender.com/ipn",
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.MONEROO_API_KEY}`,
+          "X-App-ID": process.env.MONEROO_APP_ID,
+        },
+      }
     );
 
-    /*
-    ==========================================
-    🚀 REDIRECTION
-    ==========================================
-    */
+    console.log("✅ Réponse Moneroo :", response.data);
 
-    const paymentUrl =
+    return res.redirect(response.data.payment_url);
 
-      payment.paymentUrl ||
-
-      payment.payment_url ||
-
-      payment.data?.payment_url;
-
-    if (!paymentUrl) {
-
-      return res.status(500).json({
-
-        error:
-          "URL paiement introuvable",
-
-        response:
-          payment,
-
-      });
-
-    }
-
-    return res.redirect(paymentUrl);
-
-  }
-
-  catch (error) {
+  } catch (error) {
 
     console.error(
-      "❌ Erreur CinetPay :",
-      error
+      "❌ Erreur Moneroo :",
+      error.response?.data || error.message
     );
 
     return res.status(500).json({
-
-      message:
-        "Erreur paiement",
-
-      details:
-        error.message ||
-
-        error,
-
+      error:
+        error.response?.data || error.message,
     });
 
   }
-
 });
-
-/*
-==================================================
-🔔 WEBHOOK / IPN
-==================================================
-*/
 
 app.post("/ipn", (req, res) => {
 
   console.log(
-    "🔔 Notification reçue :",
+    "🔔 Notification Moneroo :",
     req.body
   );
 
@@ -184,49 +65,17 @@ app.post("/ipn", (req, res) => {
 
 });
 
-/*
-==================================================
-✅ SUCCESS
-==================================================
-*/
-
 app.get("/success", (req, res) => {
-
-  res.send(
-    "🎉 Paiement réussi !"
-  );
-
+  res.send("🎉 Paiement réussi !");
 });
-
-/*
-==================================================
-❌ FAILED
-==================================================
-*/
-
-app.get("/failed", (req, res) => {
-
-  res.send(
-    "❌ Paiement échoué."
-  );
-
-});
-
-/*
-==================================================
-🚀 LANCEMENT SERVEUR
-==================================================
-*/
 
 const PORT =
-  process.env.PORT ||
-
-  10000;
+  process.env.PORT || 10000;
 
 app.listen(PORT, () => {
 
   console.log(
-    `🚀 BizGo API prête sur port ${PORT}`
+    `🚀 Serveur lancé sur port ${PORT}`
   );
 
 });
