@@ -1,81 +1,63 @@
 const express = require("express");
-const axios = require("axios");
+const { Moneroo } = require("moneroo"); // Importation du SDK officiel
 
 const app = express();
-
 app.use(express.json());
 
+// 🔐 INITIALISATION DU SDK MONEROO
+// Le SDK gère lui-même l'application des headers et des bonnes routes.
+const moneroo = new Moneroo({
+  secretKey: process.env.MONEROO_API_KEY,
+});
+
 app.get("/", (req, res) => {
-  res.send("✅ BizGo API Moneroo fonctionne");
+  res.send("✅ BizGo API Moneroo fonctionne avec le SDK");
 });
 
 app.get("/payer", async (req, res) => {
   try {
-
-    const response = await axios.post(
-      "https://api.moneroo.io/v1/payments",
-      {
-        amount: 2000,
-        currency: "XOF",
-        description: "Abonnement BizGo",
-        customer: {
-          name: "Mohamed",
-          email: "test@bizgo.com",
-          phone: "+22670000000",
-        },
-        redirect_url: "https://bizgo-api-1.onrender.com/success",
-        callback_url: "https://bizgo-api-1.onrender.com/ipn",
+    // Appel de la méthode officielle du SDK pour initialiser le paiement
+    const response = await moneroo.payments.initialize({
+      amount: 2000, // Le montant en XOF
+      currency: "XOF",
+      description: "Abonnement BizGo",
+      return_url: "https://bizgo-api-1.onrender.com/success", // Moneroo utilise return_url
+      customer: {
+        name: "Mohamed",
+        email: "test@bizgo.com",
+        phone: "+22670000000",
       },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.MONEROO_API_KEY}`,
-          "X-App-ID": process.env.MONEROO_APP_ID,
-        },
-      }
-    );
-
-    console.log("✅ Réponse Moneroo :", response.data);
-
-    return res.redirect(response.data.payment_url);
-
-  } catch (error) {
-
-    console.error(
-      "❌ Erreur Moneroo :",
-      error.response?.data || error.message
-    );
-
-    return res.status(500).json({
-      error:
-        error.response?.data || error.message,
     });
 
+    console.log("✅ Réponse Moneroo SDK :", response.data);
+
+    // Le SDK renvoie l'URL dans la propriété checkout_url
+    if (response.data && response.data.checkout_url) {
+      return res.redirect(response.data.checkout_url);
+    } else {
+      throw new Error("L'URL de paiement (checkout_url) est introuvable.");
+    }
+
+  } catch (error) {
+    console.error("❌ Erreur Moneroo SDK :", error.message || error);
+
+    return res.status(500).json({
+      error: error.message || "Erreur lors de l'initialisation du paiement",
+    });
   }
 });
 
+// Webhook pour intercepter les validations de paiement
 app.post("/ipn", (req, res) => {
-
-  console.log(
-    "🔔 Notification Moneroo :",
-    req.body
-  );
-
+  console.log("🔔 Notification Moneroo :", req.body);
   res.send("OK");
-
 });
 
 app.get("/success", (req, res) => {
-  res.send("🎉 Paiement réussi !");
+  res.send("🎉 Paiement réussi ! Bienvenue sur BizGo.");
 });
 
-const PORT =
-  process.env.PORT || 10000;
-
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-
-  console.log(
-    `🚀 Serveur lancé sur port ${PORT}`
-  );
-
+  console.log(`🚀 Serveur lancé sur port ${PORT}`);
 });
