@@ -1,49 +1,58 @@
 const express = require("express");
-require('dotenv').config(); // Pour charger les variables si besoin
+const axios = require("axios");
 
 const app = express();
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.send("✅ BizGo API Moneroo fonctionne avec le SDK");
+  res.send("✅ BizGo API Moneroo fonctionne (Mode Axios)");
 });
 
 app.get("/payer", async (req, res) => {
   try {
-    // Importation dynamique du SDK pour éviter le crash au démarrage
-    const { Moneroo } = await import("moneroo");
-    
-    const moneroo = new Moneroo({
-      secretKey: process.env.MONEROO_API_KEY,
-    });
+    console.log("Clé API utilisée :", process.env.MONEROO_API_KEY ? "Existe" : "Absente");
 
-    const response = await moneroo.payments.initialize({
-      amount: 2000,
-      currency: "XOF",
-      description: "Abonnement BizGo",
-      return_url: "https://bizgo-api-1.onrender.com/success",
-      customer: {
-        name: "Mohamed",
-        email: "test@bizgo.com",
-        phone: "+22670000000",
+    const response = await axios.post(
+      "https://api.moneroo.io/v1/payments",
+      {
+        amount: 2000,
+        currency: "XOF",
+        description: "Abonnement BizGo",
+        customer: {
+          name: "Mohamed",
+          email: "test@bizgo.com",
+          phone: "+22670000000",
+        },
+        return_url: "https://bizgo-api-1.onrender.com/success",
+        callback_url: "https://bizgo-api-1.onrender.com/ipn",
       },
-    });
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `Bearer ${process.env.MONEROO_API_KEY}`
+        },
+      }
+    );
 
-    console.log("✅ Réponse Moneroo SDK :", response.data);
+    console.log("✅ Réponse Moneroo brute :", response.data);
 
-    // Sécurité sur la récupération de l'URL selon la réponse du SDK
-    const checkoutUrl = response.data?.checkout_url || response.checkout_url;
+    // Sécurité pour choper l'URL peu importe comment Moneroo l'envoie
+    const checkoutUrl = response.data?.data?.checkout_url || response.data?.checkout_url;
 
     if (checkoutUrl) {
       return res.redirect(checkoutUrl);
     } else {
-      throw new Error("L'URL de paiement est introuvable dans la réponse.");
+      return res.status(400).json({
+        message: "Impossible de trouver l'URL de redirection",
+        debug: response.data
+      });
     }
 
   } catch (error) {
-    console.error("❌ Erreur Moneroo SDK :", error.message || error);
+    console.error("❌ Erreur Moneroo :", error.response?.data || error.message);
     return res.status(500).json({
-      error: error.message || "Erreur lors de l'initialisation du paiement",
+      error: error.response?.data || error.message,
     });
   }
 });
