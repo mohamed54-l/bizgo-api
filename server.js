@@ -13,7 +13,7 @@ app.get("/payer", async (req, res) => {
   try {
 
     const response = await axios.post(
-      "https://api.moneroo.io/v1/payments/initiate",
+      "https://api.moneroo.io/v1/payments",
       {
         amount: 2000,
         currency: "XOF",
